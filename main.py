@@ -3,7 +3,7 @@ import time
 import uuid
 
 from datetime import datetime
-from config import TOKEN
+from config import TOKEN, PROXY_URL, TIMEZONE
 from aiogram import Bot, Dispatcher, executor, types
 from models.users import Users
 from models.subscribe_annonce import Subscribe
@@ -15,7 +15,8 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
 logging.basicConfig(level=logging.INFO)
 
-bot = Bot(token=TOKEN)
+bot = Bot(token=TOKEN, proxy=PROXY_URL)
+
 storage = MemoryStorage()
 
 dp = Dispatcher(bot=bot, storage=storage)
@@ -80,7 +81,7 @@ async def add_new_annonce(query: types.CallbackQuery, state: FSMContext):
 async def process_name(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['name'] = message.text
-    
+
     await addAnnonceState.next()
 #     genre_list = Genre.get_list()
 #     keyboard = types.InlineKeyboardMarkup()
@@ -95,7 +96,7 @@ async def process_name(message: types.Message, state: FSMContext):
 #     print(query)
 #     async with state.proxy() as data:
 #         data['genre_id'] = query.data
-    
+
 #     await addAnnonceState.next()
     await message.answer('Введите описание мероприятия:')
 
@@ -103,7 +104,7 @@ async def process_name(message: types.Message, state: FSMContext):
 async def process_discription(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['discription'] = message.text
-    
+
     await addAnnonceState.next()
     await message.reply('Введите дату начала в формате - день.месяц.год (например - 22.12.2023):')
 
@@ -111,7 +112,7 @@ async def process_discription(message: types.Message, state: FSMContext):
 async def process_start_date(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['start_date'] = message.text
-    
+
     await addAnnonceState.next()
     await message.reply('Введите время начала (например - 18:00):')
 
@@ -130,13 +131,13 @@ async def process_start_time(message: types.Message, state: FSMContext):
         if check != []:
             Annonce.delete(check[0])
         add_data = [
-            str(uuid.uuid4()), 
-            data['name'], 
+            str(uuid.uuid4()),
+            data['name'],
             data['discription'],
             data['start_date'],
             data['start_time'],
             message.from_user.id,
-            datetime.now()
+            datetime.now(TIMEZONE)
         ]
         Annonce.add(add_data)
     yes = types.inline_keyboard.InlineKeyboardButton(text="Да", callback_data="restart")
@@ -145,7 +146,7 @@ async def process_start_time(message: types.Message, state: FSMContext):
     keyboard.add(yes, no)
     await message.answer('Данные верны?', reply_markup=keyboard)
     await state.finish()
-    
+
 # dp.message_handler(message='hello')
 # async def add_annonse_db():
 #     async with state.proxy() as data:
@@ -166,30 +167,30 @@ if __name__ == '__main__':
 
 
 # {
-#     "message_id": 438, 
-#     "from": {"id": 826586914, "is_bot": false, "first_name": "Егор", 
-#             "last_name": "Мащенко", "username": "CorkyRapier", "language_code": "ru"}, 
+#     "message_id": 438,
+#     "from": {"id": 826586914, "is_bot": false, "first_name": "Егор",
+#             "last_name": "Мащенко", "username": "CorkyRapier", "language_code": "ru"},
 #     "chat": {"id": 826586914, "first_name": "Егор", "last_name": "Мащенко", "username": "CorkyRapier", "type": "private"},
-#     "date": 1676822389, 
-#     "text": "/start", 
+#     "date": 1676822389,
+#     "text": "/start",
 #     "entities": [{"type": "bot_command", "offset": 0, "length": 6}]}
 
 # {
-#     "id": "3550163766322039316", 
+#     "id": "3550163766322039316",
 #     "from": {
-#         "id": 826586914, "is_bot": false, "first_name": "Егор", "last_name": 
-#         "Мащенко", "username": "CorkyRapier", "language_code": "ru"}, 
+#         "id": 826586914, "is_bot": false, "first_name": "Егор", "last_name":
+#         "Мащенко", "username": "CorkyRapier", "language_code": "ru"},
 #     "message": {
-#         "message_id": 450, "from": {"id": 6297688500, "is_bot": true, 
-#         "first_name": "Пространство роста и расширения. Бот.", "username": "space_for_growth_bot"}, 
+#         "message_id": 450, "from": {"id": 6297688500, "is_bot": true,
+#         "first_name": "Пространство роста и расширения. Бот.", "username": "space_for_growth_bot"},
 #     "chat": {
-#         "id": 826586914, "first_name": "Егор", "last_name": "Мащенко", 
+#         "id": 826586914, "first_name": "Егор", "last_name": "Мащенко",
 #         "username": "CorkyRapier", "type": "private"
-#         }, 
-#     "date": 1676822395, 
-#     "text": "Данные верны?", 
+#         },
+#     "date": 1676822395,
+#     "text": "Данные верны?",
 #     "reply_markup": {
-#         "inline_keyboard": [[{"text": "Да", "callback_data": "restart"}, 
-#         {"text": "Нет", "callback_data": "add_new_annonce"}]]}}, 
+#         "inline_keyboard": [[{"text": "Да", "callback_data": "restart"},
+#         {"text": "Нет", "callback_data": "add_new_annonce"}]]}},
 #     "chat_instance": "4830946017084993614", "data": "restart"
 #     }
