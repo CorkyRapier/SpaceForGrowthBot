@@ -2,6 +2,7 @@ import logging
 import time
 import uuid
 
+from datetime import datetime
 from config import TOKEN
 from aiogram import Bot, Dispatcher, executor, types
 from models.users import Users
@@ -31,6 +32,16 @@ class addAnnonceState(StatesGroup):
 @dp.callback_query_handler(text_contains='restart')
 async def start_hendler(message: types.Message or types.CallbackQuery):
     if 'text' not in message:
+        last = Annonce.get_last_annonce()[0]
+        text_post_in_channel = f"""
+        Имя: <b>{last[1]}</b>
+        Описание:: {last[2]}
+        Дата начала мероприятия: {last[3]} {last[4]}
+        """
+        subscribe = types.inline_keyboard.InlineKeyboardButton(text="Подписаться", callback_data="subscribe")
+        chat_kb = types.InlineKeyboardMarkup()
+        chat_kb.add(subscribe)
+        await bot.send_message('-1001672376670', text=text_post_in_channel, reply_markup=chat_kb, parse_mode="html")
         add_annonce = types.inline_keyboard.InlineKeyboardButton(text="Новый анонс", callback_data="add_new_annonce")
         annonce_lsit = types.inline_keyboard.InlineKeyboardButton(text="Посмотреть анонсы", callback_data='кал')
         keyboard = types.InlineKeyboardMarkup()
@@ -49,6 +60,16 @@ async def start_hendler(message: types.Message or types.CallbackQuery):
         keyboard = types.InlineKeyboardMarkup()
         keyboard.add(add_annonce, annonce_lsit)
         await message.answer("Вы хотите посмотреть анонсы мероприятий или анонсировать новое?", reply_markup=keyboard)
+
+@dp.callback_query_handler(text_contains='subscribe')
+async def subscribe_on_annonce(query: types.CallbackQuery, state: FSMContext):
+    unsubscribe = types.inline_keyboard.InlineKeyboardButton(text="Отписаться", callback_data="----")
+    unsub_kb = types.InlineKeyboardMarkup()
+    unsub_kb.add(unsubscribe)
+    await query.message.edit_reply_markup(reply_markup=unsub_kb)
+    # print(query)
+    # await bot.edit_message_reply_markup(query['from'].id, query.message.message_id, reply_markup=unsub_kb)
+    # await query.message.edit_text()
 
 @dp.callback_query_handler(text_contains='add_new_annonce')
 async def add_new_annonce(query: types.CallbackQuery, state: FSMContext):
@@ -114,7 +135,8 @@ async def process_start_time(message: types.Message, state: FSMContext):
             data['discription'],
             data['start_date'],
             data['start_time'],
-            message.from_user.id
+            message.from_user.id,
+            datetime.now()
         ]
         Annonce.add(add_data)
     yes = types.inline_keyboard.InlineKeyboardButton(text="Да", callback_data="restart")
