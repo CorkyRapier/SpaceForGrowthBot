@@ -176,6 +176,9 @@ async def process_start_time(message: types.Message, state: FSMContext):
 @dp.callback_query_handler(lambda query: 'next_' in query.data or 'prev_' in query.data)
 async def next_event(query: types.CallbackQuery):
     list_events = Subscribe.get_list_events(query['from'].id)
+    if not list_events:
+        await query.message.edit_text(f'У вас нет мероприятий на которые вы подписаны.')
+        return
     before = query.data.split("_")[0]
     serial_number = int(query.data.split("_")[1])
     visible_event = Annonce.get_one_annocne(list_events[serial_number][0])[0]
@@ -196,9 +199,7 @@ async def next_event(query: types.CallbackQuery):
     formated_date = visible_event[3].split('-')
     formated_date = '.'.join(formated_date[::-1])
     text_post_in_private = f"<b>{visible_event[1]}</b>&#010;&#010;Описание: {visible_event[2]}&#010;&#010;Дата начала мероприятия: {str(formated_date)}, {visible_event[4]}&#010;<i>Код: {visible_event[5]}</i>".replace('\n', '', 1)
-    if not list_events:
-        await query.message.edit_text(f'У вас нет мероприятий на которые вы подписаны.')
-    elif len(list_events) == 1:
+    if len(list_events) == 1:
         await query.message.edit_text(text=text_post_in_private, parse_mode="html")
     else:
         await query.message.edit_text(text=text_post_in_private, reply_markup=keyboard, parse_mode="html")
