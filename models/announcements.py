@@ -31,3 +31,8 @@ class Annonce:
                                     VALUES(?, ?, ?, ?, ?, ?, ?)""", data)
             con.commit()
             logging.info(f'{str(time.asctime())}: Add new annonce in database - user_id: "{data[5]}"')
+
+    def get_one_annocne(annonce_id):
+        with con:
+            result = cur.execute("SELECT annonce_id, name, discription, start_date, start_time, cod_u FROM annonce WHERE annonce_id = ?", (annonce_id,)).fetchall()
+            return result
