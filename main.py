@@ -5,7 +5,7 @@ import re
 
 from aiogram.utils.helper import Helper, HelperMode, ListItem
 from datetime import datetime
-from config import TOKEN, PROXY_URL, TIMEZONE
+from config import TOKEN, PROXY_URL, TIMEZONE, CHANNEL_ID
 from aiogram import Bot, Dispatcher, executor, types, filters
 from models.users import Users
 from models.subscribe_annonce import Subscribe
@@ -45,11 +45,11 @@ async def start_hendler(message: types.Message or types.CallbackQuery):
         subscribe = types.inline_keyboard.InlineKeyboardButton(text="Подписаться", callback_data="subscribe")
         chat_kb = types.InlineKeyboardMarkup()
         chat_kb.add(subscribe)
-        await bot.send_message('-1001672376670', text=text_post_in_channel, reply_markup=chat_kb, parse_mode="html")
+        await bot.send_message(CHANNEL_ID, text=text_post_in_channel, reply_markup=chat_kb, parse_mode="html")
         add_annonce = types.inline_keyboard.InlineKeyboardButton(text="Новый анонс", callback_data="add_new_annonce")
         annonce_lsit = types.inline_keyboard.InlineKeyboardButton(text="Посмотреть анонсы", callback_data='next_0')
         keyboard = types.InlineKeyboardMarkup()
-        keyboard.add(add_annonce, annonce_lsit)
+        keyboard.add(annonce_lsit)
         await message.message.answer("Вы хотите посмотреть анонсы мероприятий или анонсировать новое?", reply_markup=keyboard)
     else:
         user_id = message.from_user.id
@@ -62,13 +62,21 @@ async def start_hendler(message: types.Message or types.CallbackQuery):
         add_annonce = types.inline_keyboard.InlineKeyboardButton(text="Новый анонс", callback_data="add_new_annonce")
         annonce_lsit = types.inline_keyboard.InlineKeyboardButton(text="Посмотреть анонсы", callback_data='next_0')
         keyboard = types.InlineKeyboardMarkup()
-        keyboard.add(add_annonce, annonce_lsit)
+        keyboard.add(annonce_lsit)
         await message.answer("Вы хотите посмотреть анонсы мероприятий или анонсировать новое?", reply_markup=keyboard)
+
+@dp.channel_post_handler(lambda message: re.match('Добавлено новое мероприятие!', message.text))
+async def check_grab_annonce(message: types.Message):
+    print(message.text)
+    subscribe = types.inline_keyboard.InlineKeyboardButton(text="Подписаться", callback_data="subscribe")
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(subscribe)
+    # await message.edit_text(text=message.text, reply_markup=keyboard)
+    await bot.edit_message_reply_markup(CHANNEL_ID, message_id=message.message_id, reply_markup=keyboard)
 
 #Subscribe and unsub annonce -------------------------------------------------------
 @dp.callback_query_handler(text_contains='subscribe')
 async def subscribe_on_annonce(query: types.CallbackQuery, state: FSMContext):
-    await bot.forward_message(query['from'].id, query.message.chat.id, query.message.message_id)
     code_u = query.message.text.split(':')[-1].strip()
     response = Subscribe.add_sub([code_u, query['from'].id])
     unsub = types.inline_keyboard.InlineKeyboardButton(text="Отписаться", callback_data="delete_sub")
