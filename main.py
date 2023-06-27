@@ -46,7 +46,7 @@ async def start_hendler(message: types.Message or types.CallbackQuery):
         subscribe = types.inline_keyboard.InlineKeyboardButton(text="Подписаться", callback_data="subscribe")
         chat_kb = types.InlineKeyboardMarkup()
         chat_kb.add(subscribe)
-        await bot.send_photo(CHANNEL_ID, photo=last[8], caption=text_post_in_channel, parse_mode="html")
+        await bot.send_photo(CHANNEL_ID, photo=last[8], caption=text_post_in_channel, parse_mode="html", reply_markup=chat_kb)
         add_annonce = types.inline_keyboard.InlineKeyboardButton(text="Новый анонс", callback_data="add_new_annonce")
         annonce_lsit = types.inline_keyboard.InlineKeyboardButton(text="Посмотреть анонсы", callback_data='next_0')
         keyboard = types.InlineKeyboardMarkup()
@@ -78,7 +78,7 @@ async def start_hendler(message: types.Message or types.CallbackQuery):
 #Subscribe and unsub annonce -------------------------------------------------------
 @dp.callback_query_handler(text_contains='subscribe')
 async def subscribe_on_annonce(query: types.CallbackQuery, state: FSMContext):
-    code_u = query.message.text.split(':')[-1].strip()
+    code_u = query.message.caption.split(':')[-1].strip()
     response = Subscribe.add_sub([code_u, query['from'].id])
     unsub = types.inline_keyboard.InlineKeyboardButton(text="Отписаться", callback_data="delete_sub")
     unsub_kb = types.InlineKeyboardMarkup()
@@ -214,11 +214,13 @@ async def next_event(query: types.CallbackQuery):
     unsub = types.inline_keyboard.InlineKeyboardButton(text="Отписаться", callback_data='delete_sub')
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(next_annonce, prev_annonce, unsub)
+    keyboard_only_unsub = types.InlineKeyboardMarkup()
+    keyboard_only_unsub.add(unsub)
     formated_date = visible_event[3].split('-')
     formated_date = '.'.join(formated_date[::-1])
     text_post_in_private = f"<b>{visible_event[1]}</b>&#010;&#010;Описание: {visible_event[2]}&#010;&#010;Дата начала мероприятия: {str(formated_date)}, {visible_event[4]}&#010;<i>Код: {visible_event[5]}</i>".replace('\n', '', 1)
     if len(list_events) == 1:
-        await query.message.edit_text(text=text_post_in_private, parse_mode="html")
+        await query.message.edit_text(text=text_post_in_private, reply_markup=keyboard_only_unsub, parse_mode="html")
     else:
         await query.message.edit_text(text=text_post_in_private, reply_markup=keyboard, parse_mode="html")
 
