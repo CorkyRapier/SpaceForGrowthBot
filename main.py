@@ -28,6 +28,7 @@ dp = Dispatcher(bot=bot, storage=storage)
 #States
 class addAnnonceState(StatesGroup):
     name = State()
+    photo = State()
     discription = State()
     start_date = State()
     start_time = State()
@@ -45,11 +46,11 @@ async def start_hendler(message: types.Message or types.CallbackQuery):
         subscribe = types.inline_keyboard.InlineKeyboardButton(text="Подписаться", callback_data="subscribe")
         chat_kb = types.InlineKeyboardMarkup()
         chat_kb.add(subscribe)
-        await bot.send_message(CHANNEL_ID, text=text_post_in_channel, reply_markup=chat_kb, parse_mode="html")
+        await bot.send_photo(CHANNEL_ID, photo=last[8], caption=text_post_in_channel, parse_mode="html")
         add_annonce = types.inline_keyboard.InlineKeyboardButton(text="Новый анонс", callback_data="add_new_annonce")
         annonce_lsit = types.inline_keyboard.InlineKeyboardButton(text="Посмотреть анонсы", callback_data='next_0')
         keyboard = types.InlineKeyboardMarkup()
-        keyboard.add(annonce_lsit)
+        keyboard.add(add_annonce, annonce_lsit)
         await message.message.answer("Вы хотите посмотреть анонсы мероприятий или анонсировать новое?", reply_markup=keyboard)
     else:
         user_id = message.from_user.id
@@ -62,17 +63,17 @@ async def start_hendler(message: types.Message or types.CallbackQuery):
         add_annonce = types.inline_keyboard.InlineKeyboardButton(text="Новый анонс", callback_data="add_new_annonce")
         annonce_lsit = types.inline_keyboard.InlineKeyboardButton(text="Посмотреть анонсы", callback_data='next_0')
         keyboard = types.InlineKeyboardMarkup()
-        keyboard.add(annonce_lsit)
+        keyboard.add(add_annonce, annonce_lsit)
         await message.answer("Вы хотите посмотреть анонсы мероприятий или анонсировать новое?", reply_markup=keyboard)
 
-@dp.channel_post_handler(lambda message: re.match('Добавлено новое мероприятие!', message.text))
-async def check_grab_annonce(message: types.Message):
-    print(message.text)
-    subscribe = types.inline_keyboard.InlineKeyboardButton(text="Подписаться", callback_data="subscribe")
-    keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(subscribe)
-    # await message.edit_text(text=message.text, reply_markup=keyboard)
-    await bot.edit_message_reply_markup(CHANNEL_ID, message_id=message.message_id, reply_markup=keyboard)
+# @dp.channel_post_handler(lambda message: re.match('Добавлено новое мероприятие!', message.text))
+# async def check_grab_annonce(message: types.Message):
+#     print(message.text)
+#     subscribe = types.inline_keyboard.InlineKeyboardButton(text="Подписаться", callback_data="subscribe")
+#     keyboard = types.InlineKeyboardMarkup()
+#     keyboard.add(subscribe)
+#     # await message.edit_text(text=message.text, reply_markup=keyboard)
+#     await bot.edit_message_reply_markup(CHANNEL_ID, message_id=message.message_id, reply_markup=keyboard)
 
 #Subscribe and unsub annonce -------------------------------------------------------
 @dp.callback_query_handler(text_contains='subscribe')
@@ -113,6 +114,14 @@ async def add_new_annonce(query: types.CallbackQuery, state: FSMContext):
 async def process_name(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['name'] = message.text
+
+    await addAnnonceState.next()
+    await message.answer('Отправьте фото, которое отражает ваше мероприятие:')
+
+@dp.message_handler(lambda message: message.photo, content_types=['photo'], state=addAnnonceState.photo)
+async def process_photo(message: types.message, state: FSMContext):
+    async with state.proxy() as data:
+        data['photo'] = message.photo[-1].file_id
 
     await addAnnonceState.next()
     await message.answer('Введите описание мероприятия:')
@@ -170,7 +179,8 @@ async def process_start_time(message: types.Message, state: FSMContext):
             data['start_date'],
             data['start_time'],
             message.from_user.id,
-            datetime.now(TIMEZONE)
+            datetime.now(TIMEZONE),
+            data['photo']
         ]
         Annonce.add(add_data)
     yes = types.inline_keyboard.InlineKeyboardButton(text="Да", callback_data="restart")
