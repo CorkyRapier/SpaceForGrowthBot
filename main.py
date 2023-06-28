@@ -29,9 +29,9 @@ dp = Dispatcher(bot=bot, storage=storage)
 class addAnnonceState(StatesGroup):
     name = State()
     photo = State()
-    discription = State()
     start_date = State()
     start_time = State()
+    discription = State()
     user_id = State()
 
 @dp.message_handler(commands=['start'])
@@ -47,10 +47,12 @@ async def start_hendler(message: types.Message or types.CallbackQuery):
         chat_kb = types.InlineKeyboardMarkup()
         chat_kb.add(subscribe)
         await bot.send_photo(CHANNEL_ID, photo=last[8], caption=text_post_in_channel, parse_mode="html", reply_markup=chat_kb)
-        add_annonce = types.inline_keyboard.InlineKeyboardButton(text="Новый анонс", callback_data="add_new_annonce")
-        annonce_lsit = types.inline_keyboard.InlineKeyboardButton(text="Посмотреть анонсы", callback_data='next_0')
+        add_annonce = types.inline_keyboard.InlineKeyboardButton(text="Анонсировать мероприятие", callback_data="add_new_annonce")
+        annonce_lsit = types.inline_keyboard.InlineKeyboardButton(text="Мои желаемые мероприятия", callback_data='next_0')
+        go_to_channel = types.inline_keyboard.InlineKeyboardButton(text="Перейти в основной канал", url='https://t.me/practiceanytime')
         keyboard = types.InlineKeyboardMarkup()
-        keyboard.add(add_annonce, annonce_lsit)
+        keyboard.add(go_to_channel)
+        keyboard.row(add_annonce, annonce_lsit)
         await message.message.answer("Вы хотите посмотреть анонсы мероприятий или анонсировать новое?", reply_markup=keyboard)
     else:
         user_id = message.from_user.id
@@ -60,10 +62,12 @@ async def start_hendler(message: types.Message or types.CallbackQuery):
         await message.reply(f'Привет {user_full_name}!')
         data = [str(uuid.uuid4()), user_id, user_full_name]
         Users.new_user(data)
-        add_annonce = types.inline_keyboard.InlineKeyboardButton(text="Новый анонс", callback_data="add_new_annonce")
-        annonce_lsit = types.inline_keyboard.InlineKeyboardButton(text="Посмотреть анонсы", callback_data='next_0')
+        add_annonce = types.inline_keyboard.InlineKeyboardButton(text="Анонсировать мероприятие", callback_data="add_new_annonce")
+        annonce_lsit = types.inline_keyboard.InlineKeyboardButton(text="Мои желаемые мероприятия", callback_data='next_0')
+        go_to_channel = types.inline_keyboard.InlineKeyboardButton(text="Перейти в основной канал", url='https://t.me/practiceanytime')
         keyboard = types.InlineKeyboardMarkup()
-        keyboard.add(add_annonce, annonce_lsit)
+        keyboard.add(go_to_channel)
+        keyboard.row(add_annonce, annonce_lsit)
         await message.answer("Вы хотите посмотреть анонсы мероприятий или анонсировать новое?", reply_markup=keyboard)
 
 # @dp.channel_post_handler(lambda message: re.match('Добавлено новое мероприятие!', message.text))
@@ -124,14 +128,6 @@ async def process_photo(message: types.message, state: FSMContext):
         data['photo'] = message.photo[-1].file_id
 
     await addAnnonceState.next()
-    await message.answer('Введите описание мероприятия:')
-
-@dp.message_handler(state=addAnnonceState.discription)
-async def process_discription(message: types.Message, state: FSMContext):
-    async with state.proxy() as data:
-        data['discription'] = message.text
-
-    await addAnnonceState.next()
     await message.answer('Введите дату начала в формате - день.месяц.год (например - 22.12.2023):')
 
 @dp.message_handler(lambda message: not re.match('(\d{2})[/.-](\d{2})[/.-](\d{4})$', message.text), state=addAnnonceState.start_date)
@@ -162,13 +158,21 @@ async def process_start_time_invalid(message: types.Message):
 async def process_start_time(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['start_time'] = message.text
+
+    await addAnnonceState.next()
+    await message.answer('Введите описание мероприятия:')
+
+@dp.message_handler(state=addAnnonceState.discription)
+async def process_description(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['discription'] = message.text
         await message.answer("Добавлено новое мероприятие!")
         formated_date = data['start_date'].split('-')
         formated_date = '.'.join(formated_date[::-1])
         await message.answer(
                             f"Имя: {data['name']}\n"
-                            f"Описание:: {data['discription']}\n"
-                            f"Дата начала мероприятия: {str(formated_date)} {data['start_time']}\n")
+                            f"Дата начала мероприятия: {str(formated_date)} {data['start_time']}\n"
+                            f"Описание:: {data['discription']}\n")
         check = Annonce.check_double([message.from_user.id, data['start_date'], data['start_time']])
         if check != []:
             Annonce.delete(check[0])
