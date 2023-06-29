@@ -32,6 +32,7 @@ class addAnnonceState(StatesGroup):
     start_date = State()
     start_time = State()
     discription = State()
+    link = State()
     user_id = State()
 
 @dp.message_handler(commands=['start'])
@@ -42,7 +43,7 @@ async def start_hendler(message: types.Message or types.CallbackQuery):
         last = Annonce.get_last_annonce()[0]
         formated_date = last[3].split('-')
         formated_date = '.'.join(formated_date[::-1])
-        text_post_in_channel = f"<b>{last[1]}</b>&#010;&#010;Описание: {last[2]}&#010;&#010;Дата начала мероприятия: {str(formated_date)}, {last[4]}&#010;<i>Код: {last[7]}</i>".replace('\n', '', 1)
+        text_post_in_channel = f"<b>{last[1]}</b>&#010;&#010;Дата начала мероприятия: {str(formated_date)}, {last[4]}&#010;&#010;Описание: {last[2]}&#010;&#010;Ссылка на канал: {last[9]}&#010;&#010;<i>Код: {last[7]}</i>".replace('\n', '', 1)
         subscribe = types.inline_keyboard.InlineKeyboardButton(text="Подписаться", callback_data="subscribe")
         chat_kb = types.InlineKeyboardMarkup()
         chat_kb.add(subscribe)
@@ -83,20 +84,23 @@ async def start_hendler(message: types.Message or types.CallbackQuery):
 @dp.callback_query_handler(text_contains='subscribe')
 async def subscribe_on_annonce(query: types.CallbackQuery, state: FSMContext):
     code_u = query.message.caption.split(':')[-1].strip()
+    elem_list = query.message.caption.split('\n')
+    values = [value for value in elem_list if value]
     response = Subscribe.add_sub([code_u, query['from'].id])
     unsub = types.inline_keyboard.InlineKeyboardButton(text="Отписаться", callback_data="delete_sub")
     unsub_kb = types.InlineKeyboardMarkup()
     unsub_kb.add(unsub)
     if response:
-        await bot.send_message(query['from'].id, f'Вы подписаны на событие. (Код: {str(code_u)})', reply_markup=unsub_kb)
+        await bot.send_photo(query['from'].id, photo=query.message.photo[0].file_id, caption=f'Вы подписаны на событие: {values[0]}.&#010;&#010;{values[1]}. &#010;&#010; {values[-2]}&#010;&#010; (Код: {str(code_u)})', reply_markup=unsub_kb, parse_mode="html")
     else:
-        await bot.send_message(query['from'].id, f'Невозможно подписаться, вы уже подписаны на это событие. (Код: {str(code_u)})', reply_markup=unsub_kb)
+        await bot.send_message(query['from'].id, f'Невозможно подписаться, вы уже подписаны на событие {values[0]}. (Код: {str(code_u)})', reply_markup=unsub_kb)
 
 @dp.callback_query_handler(text_contains='delete_sub')
 async def delete_sub_annonce(query: types.CallbackQuery, state: FSMContext):
-    code_u = query.message.text.split(':')[-1].strip().replace(')', '')
+    code_u = query.message.caption.split(':')[-1].strip().replace(')', '')
     Subscribe.delete_sub([code_u, query['from'].id])
-    await query.message.edit_text('Вы отписаны от мероприятия.')
+    await query.message.delete()
+    await query.message.answer('Вы отписаны от мероприятия.')
 #End subscribe block ----------------------------------------------------------
 
 # Change state aplication, add new annonce -----------------------------
@@ -107,12 +111,16 @@ async def cancel_handler(message: types.Message, state: FSMContext):
     if current_state is None:
         return
     await state.finish()
-    await message.reply('Добавление отменено, если хотите выполнить другие действия, напишите /start.')
-    
+    reply_markup=types.ReplyKeyboardRemove()
+    await message.reply('Добавление отменено, если хотите выполнить другие действия, напишите /start.', reply_markup=reply_markup)
+
 @dp.callback_query_handler(text_contains='add_new_annonce')
 async def add_new_annonce(query: types.CallbackQuery, state: FSMContext):
     await addAnnonceState.name.set()
-    await query.message.edit_text('Введите название мероприятия. (Если вы передумали, напишите "отмена")')
+    stop_add = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False)
+    b_stop_add = types.KeyboardButton('отмена')
+    stop_add.add(b_stop_add)
+    await query.message.answer('Введите название мероприятия. (Если вы передумали, нажмите "отмена")', reply_markup=stop_add)
 
 @dp.message_handler(state=addAnnonceState.name)
 async def process_name(message: types.Message, state: FSMContext):
@@ -120,7 +128,7 @@ async def process_name(message: types.Message, state: FSMContext):
         data['name'] = message.text
 
     await addAnnonceState.next()
-    await message.answer('Отправьте фото, которое отражает ваше мероприятие:')
+    await message.answer('Отправьте фото, которое отражает ваше мероприятие(обязательно поставьте галочку "Сжать изображение"):')
 
 @dp.message_handler(lambda message: message.photo, content_types=['photo'], state=addAnnonceState.photo)
 async def process_photo(message: types.message, state: FSMContext):
@@ -162,17 +170,34 @@ async def process_start_time(message: types.Message, state: FSMContext):
     await addAnnonceState.next()
     await message.answer('Введите описание мероприятия:')
 
-@dp.message_handler(state=addAnnonceState.discription)
+@dp.message_handler(lambda message: len(message.text) > 900, state=addAnnonceState.discription)
+async def process_discription_invalid(message: types.Message):
+    """
+    If discription is invalid
+    """
+    return await message.reply("Превышен максимальный размер поста")
+
+@dp.message_handler(lambda message: len(message.text) <= 900, state=addAnnonceState.discription)
 async def process_description(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['discription'] = message.text
-        await message.answer("Добавлено новое мероприятие!")
+
+    await addAnnonceState.next()
+    await message.answer('Введите ссылку на ваш канал:')
+
+@dp.message_handler(state=addAnnonceState.link)
+async def process_link(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['link'] = message.text
+        reply_markup=types.ReplyKeyboardRemove()
+        await message.answer("Добавлено новое мероприятие!", reply_markup=reply_markup)
         formated_date = data['start_date'].split('-')
         formated_date = '.'.join(formated_date[::-1])
         await message.answer(
                             f"Имя: {data['name']}\n"
                             f"Дата начала мероприятия: {str(formated_date)} {data['start_time']}\n"
-                            f"Описание:: {data['discription']}\n")
+                            f"Описание: {data['discription']}\n"
+                            f"Ссылка на канал: {data['link']}\n")
         check = Annonce.check_double([message.from_user.id, data['start_date'], data['start_time']])
         if check != []:
             Annonce.delete(check[0])
@@ -184,7 +209,8 @@ async def process_description(message: types.Message, state: FSMContext):
             data['start_time'],
             message.from_user.id,
             datetime.now(TIMEZONE),
-            data['photo']
+            data['photo'],
+            data['link']
         ]
         Annonce.add(add_data)
     yes = types.inline_keyboard.InlineKeyboardButton(text="Да", callback_data="restart")
@@ -204,7 +230,7 @@ async def next_event(query: types.CallbackQuery):
     before = query.data.split("_")[0]
     serial_number = int(query.data.split("_")[1])
     visible_event = Annonce.get_one_annocne(list_events[serial_number][0])[0]
-    if 'next' in before:   
+    if 'next' in before:
         serial_number += 1
     elif 'prev' in before:
         serial_number -= 1
@@ -222,7 +248,7 @@ async def next_event(query: types.CallbackQuery):
     keyboard_only_unsub.add(unsub)
     formated_date = visible_event[3].split('-')
     formated_date = '.'.join(formated_date[::-1])
-    text_post_in_private = f"<b>{visible_event[1]}</b>&#010;&#010;Описание: {visible_event[2]}&#010;&#010;Дата начала мероприятия: {str(formated_date)}, {visible_event[4]}&#010;<i>Код: {visible_event[5]}</i>".replace('\n', '', 1)
+    text_post_in_private = f"<b>{visible_event[1]}</b>&#010;&#010;&#010;&#010;Дата начала мероприятия: {str(formated_date)}, {visible_event[4]}&#010;Описание: {visible_event[2]}&#010;&#010;Дата начала мероприятия: {str(formated_date)}, {visible_event[4]}&#010;<i style='font-size: 4;'>Код: {visible_event[5]}</i>".replace('\n', '', 1)
     if len(list_events) == 1:
         await query.message.edit_text(text=text_post_in_private, reply_markup=keyboard_only_unsub, parse_mode="html")
     else:
