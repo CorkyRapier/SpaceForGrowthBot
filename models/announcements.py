@@ -27,8 +27,8 @@ class Annonce:
     def add(data):
         with con:
             result = cur.execute("""INSERT INTO
-                                        annonce(annonce_id, name, discription, start_date, start_time, tg_id_user, change_date, photo)
-                                    VALUES(?, ?, ?, ?, ?, ?, ?, ?)""", data)
+                                        annonce(annonce_id, name, discription, start_date, start_time, tg_id_user, change_date, photo, link)
+                                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)""", data)
             con.commit()
             logging.info(f'{str(time.asctime())}: Add new annonce in database - user_id: "{data[5]}"')
 
