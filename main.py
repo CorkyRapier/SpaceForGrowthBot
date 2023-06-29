@@ -2,6 +2,7 @@ import logging
 import time
 import uuid
 import re
+import asyncio
 
 from aiogram.utils.helper import Helper, HelperMode, ListItem
 from datetime import datetime
@@ -44,7 +45,7 @@ async def start_hendler(message: types.Message or types.CallbackQuery):
         formated_date = last[3].split('-')
         formated_date = '.'.join(formated_date[::-1])
         text_post_in_channel = f"<b>{last[1]}</b>&#010;&#010;Дата начала мероприятия: {str(formated_date)}, {last[4]}&#010;&#010;Описание: {last[2]}&#010;&#010;Ссылка на канал: {last[9]}&#010;&#010;<i>#Анонс{last[7]}</i>".replace('\n', '', 1)
-        subscribe = types.inline_keyboard.InlineKeyboardButton(text="Подписаться", callback_data="subscribe")
+        subscribe = types.inline_keyboard.InlineKeyboardButton(text="Мне интересно!", callback_data="subscribe")
         chat_kb = types.InlineKeyboardMarkup()
         chat_kb.add(subscribe)
         await bot.send_photo(CHANNEL_ID, photo=last[8], caption=text_post_in_channel, parse_mode="html", reply_markup=chat_kb)
@@ -87,7 +88,7 @@ async def subscribe_on_annonce(query: types.CallbackQuery, state: FSMContext):
     elem_list = query.message.caption.split('\n')
     values = [value for value in elem_list if value]
     response = Subscribe.add_sub([code_u, query['from'].id])
-    unsub = types.inline_keyboard.InlineKeyboardButton(text="Отписаться", callback_data="delete_sub")
+    unsub = types.inline_keyboard.InlineKeyboardButton(text="Не интересно", callback_data="delete_sub")
     unsub_kb = types.InlineKeyboardMarkup()
     unsub_kb.add(unsub)
     if response:
@@ -228,7 +229,7 @@ async def process_link(message: types.Message, state: FSMContext):
 async def next_event(query: types.CallbackQuery):
     list_events = Subscribe.get_list_events(query['from'].id)
     if not list_events:
-        await query.message.edit_text(f'У вас нет мероприятий на которые вы подписаны.')
+        await query.message.edit_text(f'У вас нет мероприятий на которые вам интересны.')
         return
     before = query.data.split("_")[0]
     serial_number = int(query.data.split("_")[1])
@@ -244,7 +245,7 @@ async def next_event(query: types.CallbackQuery):
     next_annonce = types.inline_keyboard.InlineKeyboardButton(text="Следующее", callback_data="next_"+str(serial_number))
     prev_annonce = types.inline_keyboard.InlineKeyboardButton(text="Предыдущее", callback_data="prev_"+str(serial_number))
     # return_back = types.inline_keyboard.InlineKeyboardButton(text="Вернуться в меню", callback_data="restart")
-    unsub = types.inline_keyboard.InlineKeyboardButton(text="Отписаться", callback_data='delete_sub')
+    unsub = types.inline_keyboard.InlineKeyboardButton(text="Не интересно", callback_data='delete_sub')
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(next_annonce, prev_annonce, unsub)
     keyboard_only_unsub = types.InlineKeyboardMarkup()
@@ -259,5 +260,21 @@ async def next_event(query: types.CallbackQuery):
         # await query.message.edit_text(text=text_post_in_private, reply_markup=keyboard, parse_mode="html")
         await bot.send_photo(query['from'].id, photo=visible_event[6], caption=text_post_in_private, reply_markup=keyboard, parse_mode="html")
 
+async def periodic(sleep_for):
+    while True:
+        await asyncio.sleep(sleep_for)
+        event_soon_list = Subscribe.get_events_soon()
+        if event_soon_list == []:
+            continue
+        for event in event_soon_list:
+            one = Annonce.get_one_annocne(event[0])[0]
+            formated_date = one[3].split('-')
+            formated_date = '.'.join(formated_date[::-1])
+            text_post_in_private = f"Скоро состоится мероприятие, которое вам интересно:&#010;&#010;<b>{one[1]}</b>&#010;&#010;Дата начала мероприятия: {str(formated_date)}, {one[4]}&#010;&#010;Описание: {one[2]}&#010;&#010;Ссылка на канал: {one[7]}&#010;&#010;<i>#Анонс{one[5]}</i>".replace('\n', '', 1)
+            Subscribe.update_send_status(event[2])
+            await bot.send_photo(event[1], photo=one[6], caption=text_post_in_private, parse_mode="html")
+
 if __name__ == '__main__':
+    loop = asyncio.get_event_loop()
+    loop.create_task(periodic(7200))
     executor.start_polling(dp)

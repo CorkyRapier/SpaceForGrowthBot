@@ -21,8 +21,6 @@ class Subscribe:
     def delete_sub(data):
         with con:
             annonce_on_cod = cur.execute("SELECT annonce_id FROM annonce WHERE cod_u = ?", [data[0]]).fetchall()
-            print(data)
-            print(annonce_on_cod)
             sub_id = cur.execute("""SELECT sub_id FROM subscribe_annonce 
                                         WHERE annonce_id = ? AND tg_id_user = ?""", [annonce_on_cod[0][0], data[1]]).fetchall()
             if sub_id == []:
@@ -38,6 +36,25 @@ class Subscribe:
             if result is None:
                 return False
             return result
+
+    def get_events_soon():
+        with con:
+            result = cur.execute("""
+                SELECT
+                    sub.annonce_id,
+                    sub.tg_id_user,
+                    sub.sub_id
+                FROM
+                    subscribe_annonce sub
+                LEFT JOIN annonce ON sub.annonce_id = annonce.annonce_id
+                WHERE date(annonce.start_date) = date('now')
+                AND send = 0;""").fetchall()
+            return result
+
+    def update_send_status(sub_id):
+        with con:
+            cur.execute('UPDATE subscribe_annonce SET send = 1 WHERE sub_id = ?', (sub_id,))
+            con.commit()
 
     # def get_soon_events():
     #     with con:
