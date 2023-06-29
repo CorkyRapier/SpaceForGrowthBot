@@ -21,6 +21,8 @@ class Subscribe:
     def delete_sub(data):
         with con:
             annonce_on_cod = cur.execute("SELECT annonce_id FROM annonce WHERE cod_u = ?", [data[0]]).fetchall()
+            print(data)
+            print(annonce_on_cod)
             sub_id = cur.execute("""SELECT sub_id FROM subscribe_annonce 
                                         WHERE annonce_id = ? AND tg_id_user = ?""", [annonce_on_cod[0][0], data[1]]).fetchall()
             if sub_id == []:

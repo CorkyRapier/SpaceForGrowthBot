@@ -43,7 +43,7 @@ async def start_hendler(message: types.Message or types.CallbackQuery):
         last = Annonce.get_last_annonce()[0]
         formated_date = last[3].split('-')
         formated_date = '.'.join(formated_date[::-1])
-        text_post_in_channel = f"<b>{last[1]}</b>&#010;&#010;Дата начала мероприятия: {str(formated_date)}, {last[4]}&#010;&#010;Описание: {last[2]}&#010;&#010;Ссылка на канал: {last[9]}&#010;&#010;<i>Код: {last[7]}</i>".replace('\n', '', 1)
+        text_post_in_channel = f"<b>{last[1]}</b>&#010;&#010;Дата начала мероприятия: {str(formated_date)}, {last[4]}&#010;&#010;Описание: {last[2]}&#010;&#010;Ссылка на канал: {last[9]}&#010;&#010;<i>#Анонс{last[7]}</i>".replace('\n', '', 1)
         subscribe = types.inline_keyboard.InlineKeyboardButton(text="Подписаться", callback_data="subscribe")
         chat_kb = types.InlineKeyboardMarkup()
         chat_kb.add(subscribe)
@@ -83,7 +83,7 @@ async def start_hendler(message: types.Message or types.CallbackQuery):
 #Subscribe and unsub annonce -------------------------------------------------------
 @dp.callback_query_handler(text_contains='subscribe')
 async def subscribe_on_annonce(query: types.CallbackQuery, state: FSMContext):
-    code_u = query.message.caption.split(':')[-1].strip()
+    code_u = query.message.caption.split('с')[-1].strip()
     elem_list = query.message.caption.split('\n')
     values = [value for value in elem_list if value]
     response = Subscribe.add_sub([code_u, query['from'].id])
@@ -91,13 +91,16 @@ async def subscribe_on_annonce(query: types.CallbackQuery, state: FSMContext):
     unsub_kb = types.InlineKeyboardMarkup()
     unsub_kb.add(unsub)
     if response:
-        await bot.send_photo(query['from'].id, photo=query.message.photo[0].file_id, caption=f'Вы подписаны на событие: {values[0]}.&#010;&#010;{values[1]}. &#010;&#010; {values[-2]}&#010;&#010; (Код: {str(code_u)})', reply_markup=unsub_kb, parse_mode="html")
+        await bot.send_photo(query['from'].id, photo=query.message.photo[0].file_id, caption=f'Вы подписаны на событие: {values[0]}.&#010;&#010;{values[1]}. &#010;&#010; {values[-2]}&#010;&#010; <i>#Анонс{str(code_u)}</i>', reply_markup=unsub_kb, parse_mode="html")
     else:
-        await bot.send_message(query['from'].id, f'Невозможно подписаться, вы уже подписаны на событие {values[0]}. (Код: {str(code_u)})', reply_markup=unsub_kb)
+        await bot.send_message(query['from'].id, f'Невозможно подписаться, вы уже подписаны на событие {values[0]}. <i>#Анонс{str(code_u)}</i>', reply_markup=unsub_kb, parse_mode="html")
 
 @dp.callback_query_handler(text_contains='delete_sub')
 async def delete_sub_annonce(query: types.CallbackQuery, state: FSMContext):
-    code_u = query.message.caption.split(':')[-1].strip().replace(')', '')
+    if query.message.caption != None:
+        code_u = query.message.caption.split('с')[-1].strip()
+    else:
+        code_u = query.message.text.split('с')[-1].strip()
     Subscribe.delete_sub([code_u, query['from'].id])
     await query.message.delete()
     await query.message.answer('Вы отписаны от мероприятия.')
@@ -248,11 +251,13 @@ async def next_event(query: types.CallbackQuery):
     keyboard_only_unsub.add(unsub)
     formated_date = visible_event[3].split('-')
     formated_date = '.'.join(formated_date[::-1])
-    text_post_in_private = f"<b>{visible_event[1]}</b>&#010;&#010;&#010;&#010;Дата начала мероприятия: {str(formated_date)}, {visible_event[4]}&#010;Описание: {visible_event[2]}&#010;&#010;Дата начала мероприятия: {str(formated_date)}, {visible_event[4]}&#010;<i style='font-size: 4;'>Код: {visible_event[5]}</i>".replace('\n', '', 1)
+    text_post_in_private = f"<b>{visible_event[1]}</b>&#010;&#010;Дата начала мероприятия: {str(formated_date)}, {visible_event[4]}&#010;&#010;Описание: {visible_event[2]}&#010;&#010;Ссылка на канал: {visible_event[7]}&#010;&#010;<i>#Анонс{visible_event[5]}</i>".replace('\n', '', 1)
     if len(list_events) == 1:
-        await query.message.edit_text(text=text_post_in_private, reply_markup=keyboard_only_unsub, parse_mode="html")
+        # await query.message.edit_text(text=text_post_in_private, reply_markup=keyboard_only_unsub, parse_mode="html")
+        await bot.send_photo(query['from'].id, photo=visible_event[6], caption=text_post_in_private, reply_markup=keyboard_only_unsub, parse_mode="html")
     else:
-        await query.message.edit_text(text=text_post_in_private, reply_markup=keyboard, parse_mode="html")
+        # await query.message.edit_text(text=text_post_in_private, reply_markup=keyboard, parse_mode="html")
+        await bot.send_photo(query['from'].id, photo=visible_event[6], caption=text_post_in_private, reply_markup=keyboard, parse_mode="html")
 
 if __name__ == '__main__':
     executor.start_polling(dp)
