@@ -262,13 +262,19 @@ async def next_event(query: types.CallbackQuery):
     keyboard_only_unsub.add(unsub)
     formated_date = visible_event[3].split('-')
     formated_date = '.'.join(formated_date[::-1])
-    text_post_in_private = f"<b>{visible_event[1]}</b>&#010;&#010;Дата начала мероприятия: {str(formated_date)}, {visible_event[4]}&#010;&#010;Описание: {visible_event[2]}&#010;&#010;Ссылка на канал: {visible_event[7]}".replace('\n', '', 1)
+    text_post_in_private = f"<b>{visible_event[1]}</b>&#010;&#010;Дата начала мероприятия: {str(formated_date)}, {visible_event[4]}&#010;&#010;Описание: {visible_event[2]}&#010;&#010;Ссылка на канал: {visible_event[7]}&#010;&#010;<i>#Анонс{visible_event[5]}</i>".replace('\n', '', 1)
     if len(list_events) == 1:
         # await query.message.edit_text(text=text_post_in_private, reply_markup=keyboard_only_unsub, parse_mode="html")
-        await bot.send_photo(query['from'].id, photo=visible_event[6], caption=f'{text_post_in_private[0:895]}...&#010;&#010;<i>#Анонс{visible_event[5]}</i>', reply_markup=keyboard_only_unsub, parse_mode="html")
+        if len(text_post_in_private) > 900:
+            await bot.send_photo(query['from'].id, photo=visible_event[6], caption=f'{text_post_in_private[0:895]}...&#010;&#010;<i>#Анонс{visible_event[5]}</i>', reply_markup=keyboard_only_unsub, parse_mode="html")
+        else:
+            await bot.send_photo(query['from'].id, photo=visible_event[6], caption=text_post_in_private, reply_markup=keyboard_only_unsub, parse_mode="html")
     else:
         # await query.message.edit_text(text=text_post_in_private, reply_markup=keyboard, parse_mode="html")
-        await bot.send_photo(query['from'].id, photo=visible_event[6], caption=f'{text_post_in_private[0:895]}...&#010;&#010;<i>#Анонс{visible_event[5]}</i>', reply_markup=keyboard, parse_mode="html")
+        if len(text_post_in_private) > 900:
+            await bot.send_photo(query['from'].id, photo=visible_event[6], caption=f'{text_post_in_private[0:895]}...&#010;&#010;<i>#Анонс{visible_event[5]}</i>', reply_markup=keyboard, parse_mode="html")
+        else:
+            await bot.send_photo(query['from'].id, photo=visible_event[6], caption=text_post_in_private, reply_markup=keyboard, parse_mode="html")
 
 async def periodic(sleep_for):
     while True:
@@ -280,9 +286,12 @@ async def periodic(sleep_for):
             one = Annonce.get_one_annocne(event[0])[0]
             formated_date = one[3].split('-')
             formated_date = '.'.join(formated_date[::-1])
-            text_post_in_private = f"Скоро состоится мероприятие, которое вам интересно:&#010;&#010;<b>{one[1]}</b>&#010;&#010;Дата начала мероприятия: {str(formated_date)}, {one[4]}&#010;&#010;Описание: {one[2]}&#010;&#010;Ссылка на канал: {one[7]}".replace('\n', '', 1)
+            text_post_in_private = f"Скоро состоится мероприятие, которое вам интересно:&#010;&#010;<b>{one[1]}</b>&#010;&#010;Дата начала мероприятия: {str(formated_date)}, {one[4]}&#010;&#010;Описание: {one[2]}&#010;&#010;Ссылка на канал: {one[7]}&#010;&#010;<i>#Анонс{one[5]}</i>".replace('\n', '', 1)
             Subscribe.update_send_status(event[2])
-            await bot.send_photo(event[1], photo=one[6], caption=f'{text_post_in_private[0:900]}...&#010;&#010;<i>#Анонс{one[5]}</i>', parse_mode="html")
+            if len(text_post_in_private) > 900:
+                await bot.send_photo(event[1], photo=one[6], caption=f'{text_post_in_private[0:900]}...&#010;&#010;<i>#Анонс{one[5]}</i>', parse_mode="html")
+            else:
+                await bot.send_photo(event[1], photo=one[6], caption=text_post_in_private, parse_mode="html")
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
