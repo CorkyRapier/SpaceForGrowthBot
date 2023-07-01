@@ -48,7 +48,11 @@ async def start_hendler(message: types.Message or types.CallbackQuery):
         subscribe = types.inline_keyboard.InlineKeyboardButton(text="Мне интересно!", callback_data="subscribe")
         chat_kb = types.InlineKeyboardMarkup()
         chat_kb.add(subscribe)
-        await bot.send_photo(CHANNEL_ID, photo=last[8], caption=text_post_in_channel, parse_mode="html", reply_markup=chat_kb)
+        if len(last[2]) > 900:
+            await bot.send_photo(CHANNEL_ID, photo=last[8])
+            await bot.send_message(CHANNEL_ID, text_post_in_channel, parse_mode="html", reply_markup=chat_kb)
+        else:
+            await bot.send_photo(CHANNEL_ID, photo=last[8], caption=text_post_in_channel, parse_mode="html", reply_markup=chat_kb)
         add_annonce = types.inline_keyboard.InlineKeyboardButton(text="Анонсировать мероприятие", callback_data="add_new_annonce")
         annonce_lsit = types.inline_keyboard.InlineKeyboardButton(text="Мои желаемые мероприятия", callback_data='next_0')
         go_to_channel = types.inline_keyboard.InlineKeyboardButton(text="Перейти в основной канал", url='https://t.me/practiceanytime')
@@ -84,15 +88,21 @@ async def start_hendler(message: types.Message or types.CallbackQuery):
 #Subscribe and unsub annonce -------------------------------------------------------
 @dp.callback_query_handler(text_contains='subscribe')
 async def subscribe_on_annonce(query: types.CallbackQuery, state: FSMContext):
-    code_u = query.message.caption.split('с')[-1].strip()
-    elem_list = query.message.caption.split('\n')
+    one_annonce = None
+    if query.message.caption:
+        code_u = query.message.caption.split('с')[-1].strip()
+        elem_list = query.message.caption.split('\n')
+    else:
+        code_u = query.message.text.split('с')[-1].strip()
+        elem_list = query.message.text.split('\n')
+        one_annonce = Annonce.get_one_annocne_by_code(code_u)[0]
     values = [value for value in elem_list if value]
     response = Subscribe.add_sub([code_u, query['from'].id])
     unsub = types.inline_keyboard.InlineKeyboardButton(text="Не интересно", callback_data="delete_sub")
     unsub_kb = types.InlineKeyboardMarkup()
     unsub_kb.add(unsub)
     if response:
-        await bot.send_photo(query['from'].id, photo=query.message.photo[0].file_id, caption=f'Вы подписаны на событие: {values[0]}.&#010;&#010;{values[1]}. &#010;&#010; {values[-2]}&#010;&#010; <i>#Анонс{str(code_u)}</i>', reply_markup=unsub_kb, parse_mode="html")
+        await bot.send_photo(query['from'].id, photo=query.message.photo[0].file_id if not one_annonce else one_annonce[6], caption=f'Вы подписаны на событие: {values[0]}.&#010;&#010;{values[1]}. &#010;&#010; {values[-2]}&#010;&#010; <i>#Анонс{str(code_u)}</i>', reply_markup=unsub_kb, parse_mode="html")
     else:
         await bot.send_message(query['from'].id, f'Невозможно подписаться, вы уже подписаны на событие {values[0]}. <i>#Анонс{str(code_u)}</i>', reply_markup=unsub_kb, parse_mode="html")
 
@@ -174,14 +184,14 @@ async def process_start_time(message: types.Message, state: FSMContext):
     await addAnnonceState.next()
     await message.answer('Введите описание мероприятия:')
 
-@dp.message_handler(lambda message: len(message.text) > 900, state=addAnnonceState.discription)
-async def process_discription_invalid(message: types.Message):
-    """
-    If discription is invalid
-    """
-    return await message.reply("Превышен максимальный размер поста")
+# @dp.message_handler(lambda message: len(message.text) > 900, state=addAnnonceState.discription)
+# async def process_discription_invalid(message: types.Message):
+#     """
+#     If discription is invalid
+#     """
+#     return await message.reply("Превышен максимальный размер поста")
 
-@dp.message_handler(lambda message: len(message.text) <= 900, state=addAnnonceState.discription)
+@dp.message_handler(state=addAnnonceState.discription)
 async def process_description(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['discription'] = message.text
@@ -255,10 +265,10 @@ async def next_event(query: types.CallbackQuery):
     text_post_in_private = f"<b>{visible_event[1]}</b>&#010;&#010;Дата начала мероприятия: {str(formated_date)}, {visible_event[4]}&#010;&#010;Описание: {visible_event[2]}&#010;&#010;Ссылка на канал: {visible_event[7]}&#010;&#010;<i>#Анонс{visible_event[5]}</i>".replace('\n', '', 1)
     if len(list_events) == 1:
         # await query.message.edit_text(text=text_post_in_private, reply_markup=keyboard_only_unsub, parse_mode="html")
-        await bot.send_photo(query['from'].id, photo=visible_event[6], caption=text_post_in_private, reply_markup=keyboard_only_unsub, parse_mode="html")
+        await bot.send_photo(query['from'].id, photo=visible_event[6], caption=f'{text_post_in_private[0:895]}...&#010;&#010;<i>#Анонс{visible_event[5]}</i>', reply_markup=keyboard_only_unsub, parse_mode="html")
     else:
         # await query.message.edit_text(text=text_post_in_private, reply_markup=keyboard, parse_mode="html")
-        await bot.send_photo(query['from'].id, photo=visible_event[6], caption=text_post_in_private, reply_markup=keyboard, parse_mode="html")
+        await bot.send_photo(query['from'].id, photo=visible_event[6], caption=f'{text_post_in_private[0:895]}...&#010;&#010;<i>#Анонс{visible_event[5]}</i>', reply_markup=keyboard, parse_mode="html")
 
 async def periodic(sleep_for):
     while True:
@@ -272,7 +282,7 @@ async def periodic(sleep_for):
             formated_date = '.'.join(formated_date[::-1])
             text_post_in_private = f"Скоро состоится мероприятие, которое вам интересно:&#010;&#010;<b>{one[1]}</b>&#010;&#010;Дата начала мероприятия: {str(formated_date)}, {one[4]}&#010;&#010;Описание: {one[2]}&#010;&#010;Ссылка на канал: {one[7]}&#010;&#010;<i>#Анонс{one[5]}</i>".replace('\n', '', 1)
             Subscribe.update_send_status(event[2])
-            await bot.send_photo(event[1], photo=one[6], caption=text_post_in_private, parse_mode="html")
+            await bot.send_photo(event[1], photo=one[6], caption=f'{text_post_in_private[0:900]}...&#010;&#010;<i>#Анонс{one[5]}</i>', parse_mode="html")
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()

@@ -36,3 +36,8 @@ class Annonce:
         with con:
             result = cur.execute("SELECT annonce_id, name, discription, start_date, start_time, cod_u, photo, link FROM annonce WHERE annonce_id = ?", (annonce_id,)).fetchall()
             return result
+        
+    def get_one_annocne_by_code(cod_u):
+        with con:
+            result = cur.execute("SELECT annonce_id, name, discription, start_date, start_time, cod_u, photo, link FROM annonce WHERE cod_u = ?", (cod_u,)).fetchall()
+            return result
