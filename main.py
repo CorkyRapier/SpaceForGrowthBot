@@ -66,6 +66,7 @@ async def start_hendler(message: types.Message or types.CallbackQuery):
         logging.info(f'{str(time.asctime())}: User {user_id} use command "/start"')
 
         await message.reply(f'Привет {user_full_name}!')
+        await message.reply('<i>Уважаемый пользователь, бот находится на стадии разработки. В случае возникновения ошибок, вы можете обратиться к разработчику: https://t.me/CorkyRapier</i>', parse_mode="html")
         data = [str(uuid.uuid4()), user_id, user_full_name]
         Users.new_user(data)
         add_annonce = types.inline_keyboard.InlineKeyboardButton(text="Анонсировать мероприятие", callback_data="add_new_annonce")
