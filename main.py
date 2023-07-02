@@ -65,8 +65,25 @@ async def start_hendler(message: types.Message or types.CallbackQuery):
         user_full_name = message.from_user.full_name
         logging.info(f'{str(time.asctime())}: User {user_id} use command "/start"')
 
-        await message.reply(f'Привет {user_full_name}!')
-        await message.reply('<i>Уважаемый пользователь, бот находится на стадии разработки. В случае возникновения ошибок, вы можете обратиться к разработчику: https://t.me/CorkyRapier</i>', parse_mode="html")
+        # await message.reply(f'Привет {user_full_name}!')
+        # await message.reply('<i>Уважаемый пользователь, бот находится на стадии разработки. В случае возникновения ошибок, вы можете обратиться к разработчику: https://t.me/CorkyRapier</i>', parse_mode="html")
+        await message.reply(f"""
+Ассистент Места Силы приветствует вас! 
+
+• Я буду оповещать Вас начале мероприятий, которыми Вы заинтересовались.
+• Собирать Вам персональный календарь событий.
+Для этого не забудьте нажимать на кнопку «Мне интересно!» под теми мероприятиями, которые вы хотите посетить 
+
+Так же я буду помогать Вам размещать свои анонсы. 
+Для размещения анонса, 
+• открыть Ассистент Место Силы 
+• выбрать меню «Анонсировать мероприятие»
+• следовать шагам, предлагаемых скриптом
+• готово! 
+• в случае возникновения проблемы с загрузкой скрипта, введите в диалоговое окно слово “stop”
+
+В случае возникновения технических проблем, обратитесь в тех. Поддержку @CorkyRapier
+                            """)
         data = [str(uuid.uuid4()), user_id, user_full_name]
         Users.new_user(data)
         add_annonce = types.inline_keyboard.InlineKeyboardButton(text="Анонсировать мероприятие", callback_data="add_new_annonce")
