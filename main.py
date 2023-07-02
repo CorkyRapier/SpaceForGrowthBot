@@ -332,5 +332,5 @@ async def info_message(sleep_for):
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.create_task(periodic(7200))
-    loop.create_task(info_message(86400))
+    loop.create_task(info_message(10))
     executor.start_polling(dp)
