@@ -80,7 +80,7 @@ async def start_hendler(message: types.Message or types.CallbackQuery):
 • выбрать меню «Анонсировать мероприятие»
 • следовать шагам, предлагаемых скриптом
 • готово! 
-• в случае возникновения проблемы с загрузкой скрипта, введите в диалоговое окно слово “stop”
+• в случае возникновения проблемы с загрузкой скрипта, введите в диалоговое окно слово “отмена” или нажмите на кнопку "отмена"
 
 В случае возникновения технических проблем, обратитесь в тех. Поддержку @CorkyRapier
                             """)
@@ -311,7 +311,26 @@ async def periodic(sleep_for):
             else:
                 await bot.send_photo(event[1], photo=one[6], caption=text_post_in_private, parse_mode="html")
 
+async def info_message(sleep_for):
+    while True:
+        await asyncio.sleep(sleep_for)
+        go_to_bot = types.inline_keyboard.InlineKeyboardButton(text="запустить Ассистента", url="https://t.me/space_for_growth_bot")
+        keyboard = types.InlineKeyboardMarkup()
+        keyboard.add(go_to_bot)
+        await bot.send_message(CHANNEL_ID, text="""
+Обратите внимание!
+Для получения максимальных возможностей от пользования каналом Место Силы: 
+
+- напоминания о начале понравившегося мероприятия 
+- персональный обновляющийся календарь запланированных событий 
+- размещение анонсов в канале Место Силы 
+
+Необходимо запустить Бота-Ассистента. 
+@space_for_growth_bot""", parse_mode="html", reply_markup=keyboard)
+        continue
+
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.create_task(periodic(7200))
+    loop.create_task(info_message(86400))
     executor.start_polling(dp)
